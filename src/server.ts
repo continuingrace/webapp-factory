@@ -139,7 +139,7 @@ server.registerTool('test_webapp', {
   const dir = ensureInsideRoot(path.join(ROOT, projectDir));
   const pkg = JSON.parse(await fs.readFile(path.join(dir, 'package.json'), 'utf8'));
   if (!pkg.scripts?.test) return { content: [{ type: 'text', text: 'No npm test script is configured.' }] };
-  const result = await run('npm', ['test', '--', '--runInBand'], dir);
+  const result = await run('npm', ['test'], dir);
   return { content: [{ type: 'text', text: `exit=${result.code}\n${result.stdout}\n${result.stderr}` }], isError: result.code !== 0 };
 });
 
