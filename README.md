@@ -2,51 +2,95 @@
 
 리베의 반복적인 웹앱 제작·검수 규칙을 재사용하기 위한 **GitHub-first / Mobile-first Webapp Factory**입니다.
 
-현재 버전: **v0.2.0**
+현재 버전: **v0.3.0**
 
-## 방향
-
-v0.2.0부터는 **휴대폰에서도 웹앱을 만들고 검수할 수 있는 원격형 구조**를 기본으로 합니다.
-
-기본 흐름:
+## 기본 흐름
 
 ```text
 휴대폰 ChatGPT / Codex
         ↓
-GitHub 저장소 생성·수정
+RE Factory workflow 실행
         ↓
-GitHub Actions 자동 실행
+새 GitHub 저장소 자동 생성
         ↓
-Playwright 모바일/데스크톱 QA
+Mobile GitHub-first template 자동 적용
         ↓
-GitHub Pages 배포
+GitHub Actions 자동 QA
+        ↓
+Playwright iPhone / Android / Desktop 검사
+        ↓
+GitHub Pages 자동 배포
         ↓
 휴대폰에서 실제 URL 확인
 ```
 
-로컬 MCP는 삭제하지 않고 **선택형 고급 기능**으로 유지합니다. PC에서 로컬 파일을 직접 만들거나 점검할 때 사용할 수 있습니다.
+로컬 MCP는 삭제하지 않고 **선택형 고급 기능**으로 유지합니다. PC에서 로컬 파일을 직접 만들거나 점검할 때만 필요합니다.
 
-## v0.2.0 핵심 기능
+## v0.3.0 핵심 기능
 
-- GitHub-first 작업 구조
-- Mobile-first 웹앱 템플릿
+- GitHub Actions에서 새 웹앱 repository 자동 생성
+- 새 repository에 Mobile GitHub-first template 자동 복제
+- 앱 이름/표시 제목 자동 치환
+- Pretendard + Mobile First + visible version
+- LocalStorage autosave baseline
+- PWA manifest + service worker baseline
 - Playwright 기반 자동 QA
 - iPhone / Android / Desktop viewport 테스트
-- 가로 스크롤 여부 점검
-- LocalStorage 새로고침 복구 테스트
+- 모바일 가로 overflow 검사
+- LocalStorage 새로고침 복구 검사
 - console error / page error 검사
 - 실패 시 screenshot / video / trace 보존
-- GitHub Actions에서 자동 QA
-- GitHub Pages 자동 배포 workflow
+- GitHub Pages workflow 자동 포함
+- Pages를 Actions 방식으로 활성화 시도
 - 기존 RE Webapp Standard 유지
+
+## 새 앱을 휴대폰에서 만드는 방법
+
+GitHub에서 `continuingrace/webapp-factory` → **Actions** → **RE Factory - Create Webapp** → **Run workflow**를 누릅니다.
+
+입력값:
+
+- `app_name` — 저장소/앱 slug. 예: `paperdrop`
+- `app_title` — 화면 표시 이름. 예: `Paperdrop`
+- `description` — 선택
+- `visibility` — public / private
+
+완료되면 새 저장소가 생성되고 기본 앱, QA workflow, Pages workflow가 함께 push됩니다.
+
+## 최초 1회 필요한 GitHub 인증 설정
+
+GitHub Actions의 기본 `GITHUB_TOKEN`만으로는 다른 새 저장소를 자유롭게 생성하고 초기 push까지 하는 흐름에 제약이 있으므로, Factory에는 별도 secret `RE_FACTORY_GH_TOKEN`을 사용합니다.
+
+GitHub 공식 문서에 따르면 **fine-grained personal access token**으로 사용자 저장소 생성 endpoint를 사용할 수 있고, 이때 `Administration: write` 권한이 필요합니다.
+
+권장 설정:
+
+1. GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
+2. Resource owner: `continuingrace`
+3. Repository access: 새 저장소 생성/관리 흐름에 맞게 설정
+4. Repository permissions:
+   - Administration: Read and write
+   - Contents: Read and write
+   - Workflows: Read and write
+   - Pages: Read and write (가능한 경우)
+5. 토큰 생성
+6. `webapp-factory` → Settings → Secrets and variables → Actions
+7. New repository secret
+8. 이름: `RE_FACTORY_GH_TOKEN`
+9. 값: 생성한 토큰
+
+토큰은 코드나 README에 직접 적지 않습니다.
 
 ## Mobile GitHub-first Template
 
-`templates/mobile-github-first/`에 새 웹앱용 기준 파일이 있습니다.
-
-포함 파일:
+`templates/mobile-github-first/`에 새 웹앱 기준 파일이 있습니다.
 
 ```text
+index.html
+src/style.css
+src/app.js
+manifest.webmanifest
+sw.js
 package.json
 playwright.config.ts
 tests/mobile.spec.ts
@@ -54,36 +98,22 @@ tests/mobile.spec.ts
 .github/workflows/pages.yml
 ```
 
-### QA 프로젝트
+## 자동 QA
 
-Playwright는 다음 3개 환경을 기본 확인합니다.
+Playwright는 기본적으로 다음 환경을 검사합니다.
 
-- `mobile-safari` — iPhone 13 profile
-- `mobile-chrome` — Pixel 7 profile
-- `desktop-chrome` — Desktop Chrome profile
+- iPhone 13 profile
+- Pixel 7 profile
+- Desktop Chrome
 
-### 기본 검사
+기본 검사:
 
-1. 페이지가 정상 렌더링되는지
-2. 모바일에서 가로 overflow가 생기지 않는지
-3. 일반적인 입력 필드가 있을 경우 LocalStorage 상태가 새로고침 후 복구되는지
-4. console error / uncaught page error가 발생하지 않는지
+1. 페이지 정상 렌더링
+2. 모바일 가로 overflow 없음
+3. 입력 필드가 있으면 LocalStorage 상태가 새로고침 후 복구
+4. console error / uncaught page error 없음
 
-앱마다 핵심 버튼, 파일 업로드, 영상 export 등 도메인별 기능은 각 프로젝트의 Playwright 테스트에 추가합니다.
-
-## GitHub Actions
-
-### `RE Mobile QA`
-
-`main` push, pull request, 수동 실행 시 자동 QA를 실행합니다.
-
-실패 여부와 관계없이 `playwright-report` artifact를 남기도록 구성되어 있습니다.
-
-### `Deploy to GitHub Pages`
-
-`main` push 시 GitHub Pages 배포 workflow를 실행합니다.
-
-> 새 저장소에서는 GitHub → Settings → Pages에서 Source를 **GitHub Actions**로 한 번 지정해야 할 수 있습니다.
+영상 export, 파일 업로드, canvas, drag/drop 같은 앱별 핵심 기능은 각 프로젝트 테스트에 추가합니다.
 
 ## RE Webapp Standard
 
@@ -99,22 +129,10 @@ Playwright는 다음 3개 환경을 기본 확인합니다.
 - 요청과 무관한 정상 기능 보존
 - 대규모 리팩터링보다 최소 수정 우선
 - QA 후 commit
-- 명시적 요청 전까지 자동 push 금지
 
-## 로컬 MCP v0.1 호환 기능
+## 로컬 MCP
 
-기존 로컬 MCP 도구도 그대로 유지됩니다.
-
-- `create_webapp`
-- `apply_re_standard`
-- `inspect_project`
-- `bump_version`
-- `test_webapp`
-- `git_commit`
-
-PC에서 필요할 때만 설치하면 됩니다. 모바일 중심 사용자는 로컬 설치를 먼저 할 필요가 없습니다.
-
-## 로컬 설치가 필요한 경우
+PC에서 필요할 때만 설치합니다.
 
 ```powershell
 cd $HOME\Documents\AI-Workspace
@@ -124,19 +142,18 @@ npm install
 npm run build
 ```
 
-Codex MCP 등록 예시:
+Codex 등록 예시:
 
 ```powershell
 codex mcp add re-webapp-factory --env RE_WEBAPP_ROOT="$HOME\Documents\AI-Workspace" -- node "$HOME\Documents\AI-Workspace\webapp-factory\dist\server.js"
 ```
 
-## 앞으로의 확장
+## 다음 확장
 
-- Factory가 새 repository에 Mobile GitHub-first template 자동 적용
-- 앱별 Playwright test 자동 생성
-- GitHub Actions 결과 자동 요약
-- 실패 screenshot/video 기반 자동 수정 루프
+- ChatGPT/Codex에서 자연어 한 줄로 Factory workflow 실행
+- Actions 결과 자동 요약
+- 실패 screenshot/video를 보고 자동 수정 루프
 - GitHub Pages URL 자동 확인
 - PWA icon pipeline
-- 영상/캔버스 기반 웹앱 전용 QA
-- 모바일 Safari 특화 회귀 테스트
+- 영상/canvas 웹앱 특화 QA
+- 모바일 Safari 회귀 테스트
