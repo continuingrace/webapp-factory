@@ -1,0 +1,8 @@
+{
+  "name": "__APP_TITLE__",
+  "short_name": "__APP_TITLE__",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f7f5",
+  "theme_color": "#f7f7f5"
+}
