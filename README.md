@@ -1,44 +1,120 @@
-# RE Webapp Factory MCP
+# RE Webapp Factory
 
-리베의 반복적인 웹앱 제작 규칙을 Codex에서 재사용하기 위한 로컬 MCP 서버입니다.
+리베의 반복적인 웹앱 제작·검수 규칙을 재사용하기 위한 **GitHub-first / Mobile-first Webapp Factory**입니다.
 
-현재 버전: **v0.1.0**
+현재 버전: **v0.2.0**
 
-## v0.1.0 도구
+## 방향
 
-- `create_webapp` — RE 기본 규칙이 적용된 새 Vanilla 웹앱 생성
-- `apply_re_standard` — 기존 프로젝트에 `RE-STANDARD.md` 추가/갱신
-- `inspect_project` — 버전, PWA, LocalStorage, Git 상태 등을 읽기 전용 점검
-- `bump_version` — `package.json`의 semver 버전 증가
-- `test_webapp` — 기존 `npm test` 실행
-- `git_commit` — 로컬 커밋 생성. **push는 절대 하지 않음**
+v0.2.0부터는 **휴대폰에서도 웹앱을 만들고 검수할 수 있는 원격형 구조**를 기본으로 합니다.
 
-## 기본 RE Webapp Standard
+기본 흐름:
+
+```text
+휴대폰 ChatGPT / Codex
+        ↓
+GitHub 저장소 생성·수정
+        ↓
+GitHub Actions 자동 실행
+        ↓
+Playwright 모바일/데스크톱 QA
+        ↓
+GitHub Pages 배포
+        ↓
+휴대폰에서 실제 URL 확인
+```
+
+로컬 MCP는 삭제하지 않고 **선택형 고급 기능**으로 유지합니다. PC에서 로컬 파일을 직접 만들거나 점검할 때 사용할 수 있습니다.
+
+## v0.2.0 핵심 기능
+
+- GitHub-first 작업 구조
+- Mobile-first 웹앱 템플릿
+- Playwright 기반 자동 QA
+- iPhone / Android / Desktop viewport 테스트
+- 가로 스크롤 여부 점검
+- LocalStorage 새로고침 복구 테스트
+- console error / page error 검사
+- 실패 시 screenshot / video / trace 보존
+- GitHub Actions에서 자동 QA
+- GitHub Pages 자동 배포 workflow
+- 기존 RE Webapp Standard 유지
+
+## Mobile GitHub-first Template
+
+`templates/mobile-github-first/`에 새 웹앱용 기준 파일이 있습니다.
+
+포함 파일:
+
+```text
+package.json
+playwright.config.ts
+tests/mobile.spec.ts
+.github/workflows/qa.yml
+.github/workflows/pages.yml
+```
+
+### QA 프로젝트
+
+Playwright는 다음 3개 환경을 기본 확인합니다.
+
+- `mobile-safari` — iPhone 13 profile
+- `mobile-chrome` — Pixel 7 profile
+- `desktop-chrome` — Desktop Chrome profile
+
+### 기본 검사
+
+1. 페이지가 정상 렌더링되는지
+2. 모바일에서 가로 overflow가 생기지 않는지
+3. 일반적인 입력 필드가 있을 경우 LocalStorage 상태가 새로고침 후 복구되는지
+4. console error / uncaught page error가 발생하지 않는지
+
+앱마다 핵심 버튼, 파일 업로드, 영상 export 등 도메인별 기능은 각 프로젝트의 Playwright 테스트에 추가합니다.
+
+## GitHub Actions
+
+### `RE Mobile QA`
+
+`main` push, pull request, 수동 실행 시 자동 QA를 실행합니다.
+
+실패 여부와 관계없이 `playwright-report` artifact를 남기도록 구성되어 있습니다.
+
+### `Deploy to GitHub Pages`
+
+`main` push 시 GitHub Pages 배포 workflow를 실행합니다.
+
+> 새 저장소에서는 GitHub → Settings → Pages에서 Source를 **GitHub Actions**로 한 번 지정해야 할 수 있습니다.
+
+## RE Webapp Standard
 
 - Pretendard
 - Mobile First + Desktop responsive
 - Minimal / Simple / Modern UI
+- 명확한 폰트 위계
+- 자간 / 행간 / margin / padding 관리
 - 화면에서 버전 확인 가능
 - LocalStorage 기반 자동 저장 기본값
-- PWA manifest + service worker baseline
+- PWA baseline
 - 사용자 데이터는 기본적으로 local-first
 - 요청과 무관한 정상 기능 보존
 - 대규모 리팩터링보다 최소 수정 우선
-- 테스트/상태 확인 후 커밋
-- 사용자가 명시적으로 요청하지 않는 한 push 금지
+- QA 후 commit
+- 명시적 요청 전까지 자동 push 금지
 
-## 요구 사항
+## 로컬 MCP v0.1 호환 기능
 
-- Node.js 20 이상
-- npm
-- Git (git 도구를 사용할 경우)
-- Codex CLI
+기존 로컬 MCP 도구도 그대로 유지됩니다.
 
-이 서버는 공식 MCP TypeScript SDK v2의 `@modelcontextprotocol/server`와 stdio transport를 사용합니다.
+- `create_webapp`
+- `apply_re_standard`
+- `inspect_project`
+- `bump_version`
+- `test_webapp`
+- `git_commit`
 
-## Windows 설치
+PC에서 필요할 때만 설치하면 됩니다. 모바일 중심 사용자는 로컬 설치를 먼저 할 필요가 없습니다.
 
-PowerShell에서 원하는 작업 폴더로 이동한 뒤:
+## 로컬 설치가 필요한 경우
 
 ```powershell
 cd $HOME\Documents\AI-Workspace
@@ -48,56 +124,19 @@ npm install
 npm run build
 ```
 
-빌드가 성공하면 `dist/server.js`가 생성됩니다.
-
-## Codex MCP 등록
-
-기본적으로 Factory가 접근할 수 있는 웹앱 루트를 `RE_WEBAPP_ROOT`로 제한하는 것을 권장합니다.
-
-예시:
+Codex MCP 등록 예시:
 
 ```powershell
 codex mcp add re-webapp-factory --env RE_WEBAPP_ROOT="$HOME\Documents\AI-Workspace" -- node "$HOME\Documents\AI-Workspace\webapp-factory\dist\server.js"
 ```
 
-등록 확인:
+## 앞으로의 확장
 
-```powershell
-codex mcp list
-```
-
-Codex를 다시 시작한 뒤 `re-webapp-factory`가 enabled인지 확인하세요.
-
-## 첫 테스트
-
-Codex에서:
-
-```text
-RE Webapp Factory의 create_webapp 도구를 사용해서
-이름이 factory-test인 새 웹앱을 만들어줘.
-```
-
-정상 생성 후:
-
-```text
-RE Webapp Factory로 factory-test를 inspect 해줘.
-```
-
-생성되는 앱에는 Pretendard, 반응형 기본 UI, `v0.1.0`, LocalStorage 자동저장 예제, manifest, service worker, `RE-STANDARD.md`가 포함됩니다.
-
-## 안전 설계
-
-`RE_WEBAPP_ROOT` 바깥 경로에는 접근하지 않습니다. `create_webapp`은 기존의 **비어 있지 않은 폴더를 덮어쓰지 않습니다.** `git_commit`은 push하지 않습니다. `apply_re_standard`는 애플리케이션 코드를 수정하지 않고 표준 문서만 작성합니다.
-
-## 다음 버전 후보
-
-v0.2에서는 브라우저 QA를 추가할 예정입니다.
-
-- 로컬 앱 실행
-- 모바일 viewport 점검
-- 버튼/입력 동작 테스트
-- 새로고침 후 LocalStorage 복구 확인
-- console error 검사
-- QA 결과 보고
-
-그 이후에는 기존 프로젝트별 템플릿, GitHub repository 연결, PWA icon generation pipeline 등을 단계적으로 추가할 수 있습니다.
+- Factory가 새 repository에 Mobile GitHub-first template 자동 적용
+- 앱별 Playwright test 자동 생성
+- GitHub Actions 결과 자동 요약
+- 실패 screenshot/video 기반 자동 수정 루프
+- GitHub Pages URL 자동 확인
+- PWA icon pipeline
+- 영상/캔버스 기반 웹앱 전용 QA
+- 모바일 Safari 특화 회귀 테스트
