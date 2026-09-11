@@ -1,0 +1,15 @@
+{
+  "name": "re-mobile-webapp-template",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "serve . -l 4173",
+    "qa": "playwright test",
+    "qa:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "serve": "latest"
+  }
+}
