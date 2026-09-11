@@ -1,9 +1,9 @@
 {
   "name": "re-webapp-factory-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "RE Webapp Factory MCP - GitHub-first mobile webapp scaffolding with optional local MCP helpers, automated Playwright QA, and GitHub Pages deployment.",
+  "description": "RE Webapp Factory MCP - GitHub-first mobile webapp scaffolding with one-tap repository creation, optional local MCP helpers, automated Playwright QA, and GitHub Pages deployment.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
