@@ -1,0 +1,169 @@
+name: RE Factory - Create Webapp
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: "Repository/app slug (letters, numbers, -, _, .)"
+        required: true
+        type: string
+      app_title:
+        description: "Display title"
+        required: true
+        type: string
+      description:
+        description: "Repository description"
+        required: false
+        default: "Created by RE Webapp Factory"
+        type: string
+      visibility:
+        description: "Repository visibility"
+        required: true
+        default: "public"
+        type: choice
+        options:
+          - public
+          - private
+
+permissions:
+  contents: read
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.RE_FACTORY_GH_TOKEN }}
+      OWNER: continuingrace
+      APP_NAME: ${{ inputs.app_name }}
+      APP_TITLE: ${{ inputs.app_title }}
+      APP_DESCRIPTION: ${{ inputs.description }}
+      VISIBILITY: ${{ inputs.visibility }}
+
+    steps:
+      - name: Checkout Factory
+        uses: actions/checkout@v4
+
+      - name: Validate inputs and token
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "Missing repository secret: RE_FACTORY_GH_TOKEN"
+            echo "Create a fine-grained PAT that can create repositories and write repository contents, then save it as this Actions secret."
+            exit 1
+          fi
+          if [[ ! "$APP_NAME" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "Invalid app_name: $APP_NAME"
+            exit 1
+          fi
+
+      - name: Prepare app from Mobile GitHub-first template
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_DIR="$RUNNER_TEMP/$APP_NAME"
+          mkdir -p "$APP_DIR"
+          cp -R templates/mobile-github-first/. "$APP_DIR/"
+
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ['RUNNER_TEMP']) / os.environ['APP_NAME']
+          replacements = {
+              '__APP_TITLE__': os.environ['APP_TITLE'],
+              '__APP_SLUG__': os.environ['APP_NAME'],
+          }
+          for path in root.rglob('*'):
+              if not path.is_file():
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              path.write_text(text, encoding='utf-8')
+          PY
+
+          cat > "$APP_DIR/README.md" <<EOF
+          # $APP_TITLE
+
+          Created with **RE Webapp Factory — Mobile / GitHub First**.
+
+          - Mobile-first responsive baseline
+          - Pretendard
+          - LocalStorage autosave baseline
+          - PWA baseline
+          - Playwright QA for iPhone / Android / Desktop
+          - GitHub Actions QA
+          - GitHub Pages deployment workflow
+
+          App version: **v0.1.0**
+          EOF
+
+          cat > "$APP_DIR/RE-STANDARD.md" <<'EOF'
+          # RE WEBAPP STANDARD
+
+          - Pretendard
+          - Mobile First + Desktop responsive
+          - Minimal / Simple / Modern
+          - Clear typography hierarchy
+          - Deliberate letter-spacing, line-height, margins and padding
+          - Visible version number in UI
+          - LocalStorage autosave as the default for ordinary local state
+          - PWA baseline
+          - User data is local-first unless explicitly requested otherwise
+          - Preserve unrelated working features
+          - Prefer minimal changes over broad refactors
+          - Run QA before committing important changes
+          EOF
+
+      - name: Create GitHub repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh repo view "$OWNER/$APP_NAME" >/dev/null 2>&1; then
+            echo "Repository already exists: $OWNER/$APP_NAME"
+            exit 1
+          fi
+
+          if [ "$VISIBILITY" = "private" ]; then
+            gh repo create "$OWNER/$APP_NAME" --private --description "$APP_DESCRIPTION"
+          else
+            gh repo create "$OWNER/$APP_NAME" --public --description "$APP_DESCRIPTION"
+          fi
+
+      - name: Push generated app
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_DIR="$RUNNER_TEMP/$APP_NAME"
+          cd "$APP_DIR"
+          git init -b main
+          git config user.name "RE Webapp Factory"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: initialize $APP_TITLE with RE Webapp Factory"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${OWNER}/${APP_NAME}.git"
+          git push -u origin main
+
+      - name: Enable GitHub Pages with Actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 2
+          gh api --method POST "repos/$OWNER/$APP_NAME/pages" -f build_type=workflow >/dev/null 2>&1 || true
+
+      - name: Summary
+        shell: bash
+        run: |
+          {
+            echo "## RE Webapp Factory completed"
+            echo ""
+            echo "Repository: https://github.com/$OWNER/$APP_NAME"
+            echo "Expected Pages URL after deployment: https://$OWNER.github.io/$APP_NAME/"
+            echo ""
+            echo "QA and Pages workflows were copied into the new repository."
+          } >> "$GITHUB_STEP_SUMMARY"
