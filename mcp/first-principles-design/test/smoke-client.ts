@@ -8,22 +8,24 @@ const transport = new StdioClientTransport({
 
 const client = new Client({
   name: 'first-principles-design-smoke-test',
-  version: '0.1.0'
+  version: '0.2.0'
 });
 
 async function main() {
   await client.connect(transport);
 
   const tools = await client.listTools();
-  const reviewTool = tools.tools.find((tool) => tool.name === 'review_design');
+  const reviewTool = tools.tools.find((tool) => tool.name === 'review_design_source');
   if (!reviewTool) {
-    throw new Error('review_design tool was not discovered');
+    throw new Error('review_design_source tool was not discovered');
   }
 
   const result = await client.callTool({
-    name: 'review_design',
+    name: 'review_design_source',
     arguments: {
-      design_description: 'A mobile landing page hero uses a rounded container, which contains another rounded feature card. Two CTAs have equal visual weight and icons repeat adjacent labels.',
+      source_type: 'figma',
+      source_reference: 'https://www.figma.com/design/example?node-id=123-456',
+      design_snapshot: 'A mobile landing page hero contains a rounded outer container, a second rounded feature card, two equally strong CTAs, and icons that repeat adjacent text labels.',
       goal: 'Help first-time visitors understand the service and start a trial quickly.',
       audience: 'First-time mobile visitors',
       context: 'Mobile web landing page',
@@ -32,8 +34,16 @@ async function main() {
   });
 
   const first = result.content?.[0];
-  if (!first || first.type !== 'text' || !first.text.includes('first principles')) {
-    throw new Error('review_design returned an unexpected response');
+  if (!first || first.type !== 'text') {
+    throw new Error('review_design_source returned no text response');
+  }
+
+  const parsed = JSON.parse(first.text);
+  if (parsed?.task?.source_reference !== 'https://www.figma.com/design/example?node-id=123-456') {
+    throw new Error('source_reference was not preserved in the MCP response');
+  }
+  if (!Array.isArray(parsed?.framework?.review_order) || parsed.framework.review_order.length === 0) {
+    throw new Error('review framework was missing');
   }
 
   console.log('MCP protocol smoke test passed');
