@@ -4,7 +4,7 @@ import * as z from 'zod/v4';
 
 const server = new McpServer({
   name: 'first-principles-design',
-  version: '0.2.0'
+  version: '0.2.1'
 });
 
 const SourceType = z.enum(['figma', 'web', 'screenshot', 'manual']);
@@ -23,7 +23,7 @@ const ReviewInput = z.object({
 server.registerTool(
   'review_design_source',
   {
-    description: 'Review one explicitly identified design source from first principles. Requires an exact source reference plus an observed design snapshot; do not critique an unspecified page.',
+    description: 'Review one explicitly identified design source from first principles. Requires an exact source reference plus an observed design snapshot. For a Figma URL, the host should first use an available Figma integration to inspect that exact frame/node, then call this tool with what was actually observed. Never critique an unspecified or uninspected page.',
     inputSchema: ReviewInput
   },
   async ({ source_type, source_reference, design_snapshot, goal, audience, context, constraints = [], suspicious_patterns = [] }) => {
@@ -116,6 +116,30 @@ server.registerPrompt(
         content: {
           type: 'text',
           text: `Review this exact design source from first principles.\n\nSource type: ${source_type}\nSource: ${source_reference}\nObserved design: ${design_snapshot}\nGoal: ${goal}\nAudience: ${audience ?? 'Not specified'}\nContext: ${context ?? 'Not specified'}\n\nDo not guess about any page other than the named source. Challenge habitual patterns only when the observed design supports the critique. Recommend KEEP / REMOVE / MERGE / REPLACE / EMPHASIZE / TEST while protecting accessibility and required affordances.`
+        }
+      }
+    ]
+  })
+);
+
+server.registerPrompt(
+  'review_figma_frame',
+  {
+    description: 'End-to-end host workflow for a Figma frame: inspect the exact Figma URL/node with the host Figma integration, summarize only observed design facts, then call review_design_source.',
+    argsSchema: z.object({
+      figma_url: z.string().min(1),
+      goal: z.string().min(1),
+      audience: z.string().optional(),
+      constraints: z.string().optional()
+    })
+  },
+  async ({ figma_url, goal, audience, constraints }) => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `Inspect this exact Figma frame/node first using the available Figma MCP/integration: ${figma_url}\n\nDo not infer the layout from the URL or from prior memory. Extract the actual visible hierarchy, containers, typography roles, spacing/grouping, CTAs, controls, repeated labels/icons, and other consequential patterns. Then call the first-principles-design tool review_design_source with source_type='figma', source_reference='${figma_url}', and a concise design_snapshot containing only what you actually observed.\n\nGoal: ${goal}\nAudience: ${audience ?? 'Not specified'}\nConstraints: ${constraints ?? 'Not specified'}\n\nIf the Figma source cannot be read, stop and say that the source could not be inspected rather than fabricating a critique.`
         }
       }
     ]
