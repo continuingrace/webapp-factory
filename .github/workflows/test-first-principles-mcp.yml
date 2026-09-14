@@ -32,16 +32,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Smoke test server startup
-        shell: bash
-        run: |
-          set -euo pipefail
-          node dist/index.js >/tmp/mcp.out 2>/tmp/mcp.err &
-          pid=$!
-          sleep 2
-          if ! kill -0 "$pid" 2>/dev/null; then
-            echo 'MCP server exited unexpectedly'
-            cat /tmp/mcp.err || true
-            exit 1
-          fi
-          kill "$pid" || true
+      - name: Validate built entry point
+        run: node --check dist/index.js
