@@ -4,31 +4,36 @@ import * as z from 'zod/v4';
 
 const server = new McpServer({
   name: 'first-principles-design',
-  version: '0.1.0'
+  version: '0.2.0'
 });
 
+const SourceType = z.enum(['figma', 'web', 'screenshot', 'manual']);
+
 const ReviewInput = z.object({
-  design_description: z.string().min(1).describe('Describe the screen, layout, component, or design decision to review.'),
+  source_type: SourceType.describe('Where the design comes from.'),
+  source_reference: z.string().min(1).describe('Exact Figma URL/node, web URL, screenshot identifier, or manual reference.'),
+  design_snapshot: z.string().min(1).describe('A concise extraction of the actual design to review. For Figma/web/screenshot, the host should inspect that exact source first and pass the observed structure here.'),
   goal: z.string().min(1).describe('Primary communication or user goal.'),
   audience: z.string().optional().describe('Primary audience or user type.'),
   context: z.string().optional().describe('Channel or environment: web, app, social, presentation, print, etc.'),
   constraints: z.array(z.string()).optional().describe('Non-negotiable constraints such as brand, accessibility, platform, or development limits.'),
-  suspicious_patterns: z.array(z.string()).optional().describe('Patterns you already suspect may be habitual or unnecessary.')
+  suspicious_patterns: z.array(z.string()).optional().describe('Patterns already suspected to be habitual or unnecessary.')
 });
 
 server.registerTool(
-  'review_design',
+  'review_design_source',
   {
-    description: 'Challenge a design from first principles. Questions the necessity of elements, separates goals from conventions, and proposes keep/remove/merge/replace/emphasize actions.',
+    description: 'Review one explicitly identified design source from first principles. Requires an exact source reference plus an observed design snapshot; do not critique an unspecified page.',
     inputSchema: ReviewInput
   },
-  async ({ design_description, goal, audience, context, constraints = [], suspicious_patterns = [] }) => {
+  async ({ source_type, source_reference, design_snapshot, goal, audience, context, constraints = [], suspicious_patterns = [] }) => {
     const framework = {
       principle: 'Do not defend a pattern because it is common. Defend it only if it serves the stated goal under the stated constraints.',
+      source_rule: 'The critique applies only to the exact source_reference supplied. If the host has not inspected that source, it should inspect it first instead of guessing.',
       review_order: [
         'Clarify the real job of the design',
-        'Identify every major element or pattern and state its job',
-        'Ask what breaks if that element disappears',
+        'Identify the major elements or patterns and state their job',
+        'Ask what breaks if each element disappears',
         'Detect duplicated grouping, hierarchy, decoration, explanation, or interaction',
         'Separate user need from convention or fashion',
         'Choose the lowest-complexity structure that preserves meaning and usability',
@@ -59,7 +64,9 @@ server.registerTool(
     };
 
     const task = {
-      design_description,
+      source_type,
+      source_reference,
+      design_snapshot,
       goal,
       audience: audience ?? 'Not specified',
       context: context ?? 'Not specified',
@@ -68,6 +75,7 @@ server.registerTool(
     };
 
     const responseInstructions = [
+      'Begin by naming the exact source_reference being reviewed so the user can verify the target.',
       'Return a concise but rigorous critique.',
       'Start with the underlying design job in one sentence.',
       'Review the most consequential elements first, not every tiny detail.',
@@ -89,23 +97,25 @@ server.registerTool(
 );
 
 server.registerPrompt(
-  'first_principles_design_review',
+  'review_explicit_design_source',
   {
-    description: 'A reusable prompt for rigorous first-principles design critique.',
+    description: 'Review one exact Figma frame, webpage, screenshot, or manually described design. The host must inspect the named source before calling the MCP.',
     argsSchema: z.object({
-      design_description: z.string(),
+      source_type: SourceType,
+      source_reference: z.string(),
+      design_snapshot: z.string(),
       goal: z.string(),
       audience: z.string().optional(),
       context: z.string().optional()
     })
   },
-  async ({ design_description, goal, audience, context }) => ({
+  async ({ source_type, source_reference, design_snapshot, goal, audience, context }) => ({
     messages: [
       {
         role: 'user',
         content: {
           type: 'text',
-          text: `Review this design from first principles.\n\nDesign: ${design_description}\nGoal: ${goal}\nAudience: ${audience ?? 'Not specified'}\nContext: ${context ?? 'Not specified'}\n\nDo not assume common UI patterns are necessary. For each major element, identify its real job, ask what is lost if it disappears, detect duplicated grouping or emphasis, and recommend KEEP / REMOVE / MERGE / REPLACE / EMPHASIZE / TEST. Protect accessibility and required affordances. Prefer the simplest structure that preserves meaning and usability. Avoid taste-only judgments.`
+          text: `Review this exact design source from first principles.\n\nSource type: ${source_type}\nSource: ${source_reference}\nObserved design: ${design_snapshot}\nGoal: ${goal}\nAudience: ${audience ?? 'Not specified'}\nContext: ${context ?? 'Not specified'}\n\nDo not guess about any page other than the named source. Challenge habitual patterns only when the observed design supports the critique. Recommend KEEP / REMOVE / MERGE / REPLACE / EMPHASIZE / TEST while protecting accessibility and required affordances.`
         }
       }
     ]
