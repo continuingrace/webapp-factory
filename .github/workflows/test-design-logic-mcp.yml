@@ -1,0 +1,36 @@
+name: Test Design Logic MCP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mcp/design-logic/**'
+      - '.github/workflows/test-design-logic-mcp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp/design-logic
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: MCP protocol smoke test
+        run: npm run test:mcp
