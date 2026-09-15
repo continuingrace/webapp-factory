@@ -8,7 +8,7 @@ const transport = new StdioClientTransport({
 
 const client = new Client({
   name: 'first-principles-design-smoke-test',
-  version: '0.2.1'
+  version: '0.3.0'
 });
 
 async function main() {
@@ -24,6 +24,10 @@ async function main() {
   const figmaPrompt = prompts.prompts.find((prompt) => prompt.name === 'review_figma_frame');
   if (!figmaPrompt) {
     throw new Error('review_figma_frame prompt was not discovered');
+  }
+  const safePrompt = prompts.prompts.find((prompt) => prompt.name === 'plan_safe_revision');
+  if (!safePrompt) {
+    throw new Error('plan_safe_revision prompt was not discovered');
   }
 
   const sourceReference = 'https://www.figma.com/design/example?node-id=123-456';
@@ -52,17 +56,20 @@ async function main() {
   if (!Array.isArray(parsed?.framework?.review_order) || parsed.framework.review_order.length === 0) {
     throw new Error('review framework was missing');
   }
+  if (parsed?.safe_revision_policy?.mode !== 'proposal_only_until_explicit_approval') {
+    throw new Error('safe revision policy was missing');
+  }
 
-  const promptResult = await client.getPrompt({
-    name: 'review_figma_frame',
+  const safeResult = await client.getPrompt({
+    name: 'plan_safe_revision',
     arguments: {
-      figma_url: sourceReference,
-      goal: 'Help first-time visitors understand the service and start a trial quickly.'
+      source_reference: sourceReference,
+      recommendation: 'Merge the nested cards and reduce the secondary CTA emphasis.'
     }
   });
-  const promptText = promptResult.messages?.[0]?.content;
-  if (!promptText || promptText.type !== 'text' || !promptText.text.includes(sourceReference)) {
-    throw new Error('review_figma_frame did not preserve the exact Figma source');
+  const safeText = safeResult.messages?.[0]?.content;
+  if (!safeText || safeText.type !== 'text' || !safeText.text.includes('DO NOT change anything yet') || !safeText.text.includes('Wait for my separate explicit approval')) {
+    throw new Error('plan_safe_revision did not preserve the non-destructive approval gate');
   }
 
   console.log('MCP protocol smoke test passed');
