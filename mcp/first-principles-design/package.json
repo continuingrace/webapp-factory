@@ -1,6 +1,6 @@
 {
   "name": "first-principles-design-mcp",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "An MCP server that challenges habitual design decisions with first-principles reasoning.",
