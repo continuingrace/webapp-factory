@@ -1,9 +1,9 @@
 {
   "name": "language-qa-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "An MCP server for Korean proofreading and natural English/Konglish review.",
+  "description": "An MCP server for expert Korean editorial polishing and natural English/Konglish review.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
