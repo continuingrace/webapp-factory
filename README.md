@@ -2,7 +2,7 @@
 
 리베의 반복적인 웹앱 제작·검수 규칙을 재사용하기 위한 **GitHub-first / Mobile-first Webapp Factory**입니다.
 
-현재 버전: **v0.3.0**
+현재 버전: **v0.4.0**
 
 ## 기본 흐름
 
@@ -26,7 +26,7 @@ GitHub Pages 자동 배포
 
 로컬 MCP는 삭제하지 않고 **선택형 고급 기능**으로 유지합니다. PC에서 로컬 파일을 직접 만들거나 점검할 때만 필요합니다.
 
-## v0.3.0 핵심 기능
+## v0.4.0 핵심 기능
 
 - GitHub Actions에서 새 웹앱 repository 자동 생성
 - 새 repository에 Mobile GitHub-first template 자동 복제
@@ -42,6 +42,9 @@ GitHub Pages 자동 배포
 - 실패 시 screenshot / video / trace 보존
 - GitHub Pages workflow 자동 포함
 - Pages를 Actions 방식으로 활성화 시도
+- Pages 배포 폴더 자동 감지: `/`, `/dist`, `/docs`, `/out`, `/build`
+- `index.html`이 없으면 잘못된 성공 대신 배포 중단 및 원인 표시
+- 로컬 프로젝트 검사에서 Pages 준비 여부와 실제 배포 폴더 확인
 - 기존 RE Webapp Standard 유지
 
 ## 새 앱을 휴대폰에서 만드는 방법
@@ -56,6 +59,13 @@ GitHub에서 `continuingrace/webapp-factory` → **Actions** → **RE Factory - 
 - `visibility` — public / private
 
 완료되면 새 저장소가 생성되고 기본 앱, QA workflow, Pages workflow가 함께 push됩니다.
+
+## GitHub Pages 배포 폴더 안전 규칙
+
+- 빌드 과정이 없는 정적 웹앱은 저장소 루트의 `index.html`을 기본값으로 사용합니다.
+- 빌드 결과가 `dist`, `docs`, `out`, `build`에 있다면 Pages workflow가 실제 `index.html` 위치를 자동으로 찾아 그 폴더만 배포합니다.
+- 지원 위치 어디에도 `index.html`이 없으면 workflow가 실패하며, 404가 나는 빈 사이트를 성공으로 처리하지 않습니다.
+- 배포 완료 판단은 Actions 성공 표시만으로 하지 않고 실제 Pages URL에서 앱이 열리는 것까지 확인합니다.
 
 ## 최초 1회 필요한 GitHub 인증 설정
 
@@ -129,6 +139,9 @@ Playwright는 기본적으로 다음 환경을 검사합니다.
 - 요청과 무관한 정상 기능 보존
 - 대규모 리팩터링보다 최소 수정 우선
 - QA 후 commit
+- 정적 앱은 가능하면 루트에 `index.html` 유지
+- 별도 출력 폴더 사용 시 Pages 배포 폴더와 일치 확인
+- Actions 성공 후 실제 Pages URL 렌더링 확인
 
 ## 로컬 MCP
 

@@ -98,7 +98,7 @@ jobs:
           - PWA baseline
           - Playwright QA for iPhone / Android / Desktop
           - GitHub Actions QA
-          - GitHub Pages deployment workflow
+          - GitHub Pages deployment workflow with automatic publish-directory detection
 
           App version: **v0.1.0**
           EOF
@@ -118,6 +118,9 @@ jobs:
           - Preserve unrelated working features
           - Prefer minimal changes over broad refactors
           - Run QA before committing important changes
+          - For a static app, keep index.html at repository root whenever practical
+          - If output lives in dist/docs/out/build, Pages must publish that exact directory
+          - A successful workflow is not enough; verify that the public Pages URL renders the app
           EOF
 
       - name: Create GitHub repository

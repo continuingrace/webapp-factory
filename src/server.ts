@@ -6,7 +6,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 const SERVER_NAME = 're-webapp-factory';
-const SERVER_VERSION = '0.1.0';
+const SERVER_VERSION = '0.4.0';
 const ROOT = path.resolve(process.env.RE_WEBAPP_ROOT || process.cwd());
 
 function ensureInsideRoot(target: string) {
@@ -39,7 +39,7 @@ async function run(command: string, args: string[], cwd: string) {
   });
 }
 
-const standards = `# RE WEBAPP STANDARD\n\n- Font: Pretendard\n- Responsive: Mobile First, desktop compatible\n- Visual direction: minimal, simple, modern\n- Typography: deliberate hierarchy, line-height, letter-spacing, margin and padding\n- Version: visible in the UI\n- Storage: local-first; use LocalStorage for ordinary project state unless another store is explicitly requested\n- Recovery: restore work after refresh where practical\n- PWA: include manifest and installable baseline for new apps\n- Privacy: do not send user data to external services unless explicitly requested\n- Safe edit: preserve unrelated working features and prefer minimal changes over broad refactors\n- Git: inspect and test before committing; never push unless explicitly requested\n`;
+const standards = `# RE WEBAPP STANDARD\n\n- Font: Pretendard\n- Responsive: Mobile First, desktop compatible\n- Visual direction: minimal, simple, modern\n- Typography: deliberate hierarchy, line-height, letter-spacing, margin and padding\n- Version: visible in the UI\n- Storage: local-first; use LocalStorage for ordinary project state unless another store is explicitly requested\n- Recovery: restore work after refresh where practical\n- PWA: include manifest and installable baseline for new apps\n- Privacy: do not send user data to external services unless explicitly requested\n- Safe edit: preserve unrelated working features and prefer minimal changes over broad refactors\n- Deployment: for a static app, keep index.html at repository root whenever practical; otherwise configure Pages to publish the exact dist/docs/out/build directory\n- Verification: a successful deployment workflow is not enough; confirm that the public URL renders the app\n- Git: inspect and test before committing; never push unless explicitly requested\n`;
 
 function vanillaFiles(appName: string) {
   const title = appName.replace(/[-_]+/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
@@ -88,17 +88,27 @@ server.registerTool('apply_re_standard', {
 });
 
 server.registerTool('inspect_project', {
-  description: 'Inspect a project directory, package version, git status, and presence of RE/PWA/local-storage signals. Read-only.',
+  description: 'Inspect a project directory, package version, git status, Pages publish directory, and presence of RE/PWA/local-storage signals. Read-only.',
   inputSchema: z.object({ projectDir: z.string().min(1) })
 }, async ({ projectDir }) => {
   const dir = ensureInsideRoot(path.join(ROOT, projectDir));
-  const files = await fs.readdir(dir).catch(() => []);
+  const files: string[] = await fs.readdir(dir).catch((): string[] => []);
   let pkg: any = null;
   if (await exists(path.join(dir, 'package.json'))) {
     try { pkg = JSON.parse(await fs.readFile(path.join(dir, 'package.json'), 'utf8')); } catch {}
   }
   const git = await run('git', ['status', '--short'], dir).catch(() => ({ code: 1, stdout: '', stderr: 'git unavailable' }));
-  const index = await fs.readFile(path.join(dir, 'index.html'), 'utf8').catch(() => '');
+  const publishCandidates = ['.', 'dist', 'docs', 'out', 'build'];
+  let publishDirectory: string | null = null;
+  for (const candidate of publishCandidates) {
+    if (await exists(path.join(dir, candidate, 'index.html'))) {
+      publishDirectory = candidate;
+      break;
+    }
+  }
+  const index = publishDirectory
+    ? await fs.readFile(path.join(dir, publishDirectory, 'index.html'), 'utf8').catch(() => '')
+    : '';
   const appJs = await fs.readFile(path.join(dir, 'src/app.js'), 'utf8').catch(() => '');
   const report = {
     directory: dir,
@@ -106,6 +116,9 @@ server.registerTool('inspect_project', {
     files,
     hasREStandard: files.includes('RE-STANDARD.md'),
     hasManifest: files.includes('manifest.webmanifest') || files.includes('manifest.json'),
+    pagesReady: publishDirectory !== null,
+    publishDirectory,
+    deploymentIssue: publishDirectory ? null : 'No index.html found in /, /dist, /docs, /out, or /build.',
     visibleVersionSignal: /v\d+\.\d+\.\d+/.test(index),
     localStorageSignal: /localStorage/.test(appJs),
     gitStatus: git.stdout.trim() || '(clean or not a git repository)',

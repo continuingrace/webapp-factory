@@ -24,6 +24,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Detect static site directory
+        id: site
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in . dist docs out build; do
+            if [ "$dir" = "." ]; then
+              entry="index.html"
+            else
+              entry="$dir/index.html"
+            fi
+
+            if [ -f "$entry" ]; then
+              echo "dir=$dir" >> "$GITHUB_OUTPUT"
+              echo "Publishing $entry"
+              exit 0
+            fi
+          done
+
+          echo "::error::No deployable index.html found in /, /dist, /docs, /out, or /build."
+          exit 1
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
@@ -32,7 +54,7 @@ jobs:
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: ${{ steps.site.outputs.dir }}
 
       - name: Deploy to GitHub Pages
         id: deployment
